@@ -28,6 +28,11 @@ It includes:
 - Prevents excessive traffic and server overload.  
 
 ---
+## Example Usage  
+
+![Workflow Diagram ![proxyServerUml](https://github.com/user-attachments/assets/4f13a5a2-c4df-4350-ae15-bad2c9e962be)
+]
+
 
 ## 🛠 Example Usage with Results  
 
