@@ -23,7 +23,6 @@ class LRUCache {
     private final Map<String, Node> cacheMap;
     private Node head, tail;
 
-    // Constructor
     public LRUCache(int capacity) {
         this.capacity = capacity;
         this.cacheMap = new HashMap<>();
@@ -31,90 +30,72 @@ class LRUCache {
         this.tail = null;
     }
 
-    // Get a value from the cache
     public synchronized String get(String key) {
         if (cacheMap.containsKey(key)) {
             Node node = cacheMap.get(key);
-            moveToHead(node); // Mark as recently used
+            moveToHead(node);
+            System.out.println("[CACHE] HIT for: " + key);
             return node.value;
         }
-        return null; // Not in cache
+        System.out.println("[CACHE] MISS for: " + key);
+        return null;
     }
 
-    // Put a key-value pair in the cache
     public synchronized void put(String key, String value) {
         if (cacheMap.containsKey(key)) {
             Node node = cacheMap.get(key);
             node.value = value;
-            moveToHead(node); // Update and mark as recently used
+            moveToHead(node);
+            System.out.println("[CACHE] Updated and moved to head: " + key);
         } else {
             Node newNode = new Node(key, value);
             if (cacheMap.size() >= capacity) {
-                removeTail(); // Remove least recently used
+                System.out.println("[CACHE] Capacity full. Removing LRU: " + tail.key);
+                removeTail();
             }
-            addToHead(newNode); // Add to cache
+            addToHead(newNode);
             cacheMap.put(key, newNode);
+            System.out.println("[CACHE] PUT for: " + key);
         }
     }
 
-    // Remove the least recently used node (tail)
     private void removeTail() {
         if (tail != null) {
             cacheMap.remove(tail.key);
             if (tail.prev != null) {
                 tail.prev.next = null;
             } else {
-                head = null; // Cache is now empty
+                head = null;
             }
             tail = tail.prev;
         }
     }
 
-    // Move a node to the head (most recently used)
     private void moveToHead(Node node) {
-        if (node == head) return; // Already the most recently used
+        if (node == head) return;
 
-        // Remove node from its current position
-        if (node.prev != null) {
-            node.prev.next = node.next;
-        }
-        if (node.next != null) {
-            node.next.prev = node.prev;
-        }
+        if (node.prev != null) node.prev.next = node.next;
+        if (node.next != null) node.next.prev = node.prev;
 
-        // Update tail if needed
-        if (node == tail) {
-            tail = node.prev;
-        }
+        if (node == tail) tail = node.prev;
 
-        // Insert node at the head
         node.next = head;
         node.prev = null;
 
-        if (head != null) {
-            head.prev = node;
-        }
+        if (head != null) head.prev = node;
         head = node;
 
-        // Update tail for a single element case
-        if (tail == null) {
-            tail = head;
-        }
+        if (tail == null) tail = head;
     }
 
-    // Add a new node to the head of the list
     private void addToHead(Node node) {
         node.next = head;
         node.prev = null;
 
-        if (head != null) {
-            head.prev = node;
-        }
+        if (head != null) head.prev = node;
         head = node;
 
-        if (tail == null) {
-            tail = head; // First element in the cache
-        }
+        if (tail == null) tail = head;
     }
 }
 
@@ -127,14 +108,14 @@ class ProxyServer {
 
     public ProxyServer(int port, int maxClients, int cacheSize) {
         this.port = port;
-        this.cache = new LRUCache(cacheSize); // Replace with the LRU Cache
+        this.cache = new LRUCache(cacheSize);
         this.semaphore = new Semaphore(maxClients);
         this.threadPool = Executors.newFixedThreadPool(maxClients);
     }
 
     public void start() {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("Proxy server is running on port: " + port);
+            System.out.println("🚀 Proxy server is running on port: " + port);
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
@@ -142,12 +123,13 @@ class ProxyServer {
                 threadPool.submit(() -> handleClient(clientSocket));
             }
         } catch (IOException | InterruptedException e) {
-            System.err.println("Server error: " + e.getMessage());
+            System.err.println("❌ Server error: " + e.getMessage());
         }
     }
 
     private void handleClient(Socket clientSocket) {
-        System.out.println("Received request: " );
+        System.out.println("📥 Received client connection.");
+        long startTime = System.currentTimeMillis();
 
         try (BufferedReader clientReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
              BufferedWriter clientWriter = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()))) {
@@ -165,6 +147,16 @@ class ProxyServer {
             }
 
             String url = requestParts[1];
+            if (url.startsWith("//")) {
+                url = "http:" + url;
+            }
+
+            // Ignore static resources
+            if (isStaticResource(url)) {
+                return;
+            }
+
+            System.out.println("🌐 Processing request for: " + url);
             String cachedResponse = cache.get(url);
 
             if (cachedResponse != null) {
@@ -179,15 +171,23 @@ class ProxyServer {
                 }
             }
         } catch (IOException e) {
-            System.err.println("Error handling client: " + e.getMessage());
+            System.err.println("⚠️ Error handling client: " + e.getMessage());
         } finally {
             try {
                 clientSocket.close();
             } catch (IOException e) {
-                System.err.println("Error closing client socket: " + e.getMessage());
+                System.err.println("⚠️ Error closing socket: " + e.getMessage());
             }
             semaphore.release();
+            long duration = System.currentTimeMillis() - startTime;
+            System.out.println("⏱️ Request handled in " + duration + " ms\n");
         }
+    }
+
+    private boolean isStaticResource(String url) {
+        return url.endsWith(".ico") || url.endsWith(".png") || url.endsWith(".jpg") ||
+               url.endsWith(".css") || url.endsWith(".js") || url.contains("favicon") ||
+               url.contains("/images/") || url.contains("/client_204") || url.contains("/xjs/");
     }
 
     private String fetchFromRemoteServer(String url) {
@@ -198,6 +198,7 @@ class ProxyServer {
 
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
+                System.out.println("❌ Remote server responded with: " + responseCode);
                 return null;
             }
 
@@ -210,9 +211,10 @@ class ProxyServer {
             }
             remoteReader.close();
 
+            System.out.println("✅ Fetched from remote: " + url);
             return responseBuilder.toString();
         } catch (IOException e) {
-            System.err.println("Error fetching from remote server: " + e.getMessage());
+            System.err.println("❌ Error fetching from remote: " + e.getMessage());
             return null;
         }
     }
