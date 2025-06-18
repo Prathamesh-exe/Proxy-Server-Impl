@@ -1,4 +1,4 @@
-# 🚀 Multithreaded Proxy Server with LRU Cache and Rate Limiting  
+# 🚀 Multithreaded Proxy Server with LRU Cache
 
 ## 📌 Overview  
 This is a **Java-based multithreaded proxy server** that efficiently handles HTTP `GET` requests.  
