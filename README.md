@@ -55,7 +55,7 @@ Serving from cache: http://example.com Cache Hit - Response served from cache. <
 GET http://example.com (Sent multiple times rapidly)
 
 #### **Result:**  
-Serving from cache: http://example.com Serving from cache: http://example.com Request blocked - Too many requests from this client. Request blocked - Too many requests from this client. Serving from cache: http://example.com Request blocked - Too many requests from this client.
+Serving from cache: http://example.com Serving from cache: http://example.com Request blocked - Too many requests from this client. Request blocked - Too many requests from this client. Serving from cache: http://example.com Request blocked -Too many requests from this client.
 
 ---
 
